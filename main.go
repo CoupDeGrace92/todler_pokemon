@@ -28,3 +28,4 @@ func main() {
 		fmt.Println("Created png for pikachu")
 	}
 }
+

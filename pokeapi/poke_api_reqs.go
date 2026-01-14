@@ -151,3 +151,4 @@ func SpriteToFile(name string, opts ...string) error {
 	}
 	return nil
 }
+
