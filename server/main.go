@@ -51,12 +51,14 @@ func main() {
 
 	ServerMux := http.NewServeMux()
 
-	ServerMux.Handle("/api/register", http.HandlerFunc(apiCfg.HandlerNewUser))
+	ServerMux.Handle("POST /api/register", http.HandlerFunc(apiCfg.HandlerNewUser))
 
 	server := &http.Server{
 		Handler: ServerMux,
 		Addr:    os.Getenv("PORT"),
 	}
+
+	fmt.Println("Serving on port ", server.Addr)
 
 	err = server.ListenAndServe()
 	if err != nil {
