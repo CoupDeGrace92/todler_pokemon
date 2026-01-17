@@ -6,15 +6,24 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"coupdegrace92/pokemon_for_todlers/server/database"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	db *database.Queries
+}
+
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Username  string    `json:"username"`
 }
 
 func main() {
@@ -36,18 +45,13 @@ func main() {
 	dbQueries := database.New(db)
 
 	//OUR HANDLERS ARE EMPTY - THIS CONFIG WILL BE IMPORTANT FOR DB INTERACTION
-	apiCfg = apiConfig{
+	apiCfg := apiConfig{
 		db: dbQueries,
 	}
 
 	ServerMux := http.NewServeMux()
 
-	/* CURRENTLY WE DON'T HAVE ANYTHING TO SERVE WITH THE FILE SERVER
-	fileserverPath := http.Dir("./assets/")
-	fileserver := http.FileServer(fileserverPath)
-	*/
-
-	//Register handles to the server mux here
+	ServerMux.Handle("/api/register", http.HandlerFunc(apiCfg.HandlerNewUser))
 
 	server := &http.Server{
 		Handler: ServerMux,
