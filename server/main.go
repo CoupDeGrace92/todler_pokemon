@@ -52,6 +52,7 @@ func main() {
 	ServerMux := http.NewServeMux()
 
 	ServerMux.Handle("POST /api/register", http.HandlerFunc(apiCfg.HandlerNewUser))
+	ServerMux.Handle("DELETE /admin/reset", http.HandlerFunc(apiCfg.HandlerReset))
 
 	server := &http.Server{
 		Handler: ServerMux,

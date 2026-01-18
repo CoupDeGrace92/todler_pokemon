@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -52,4 +53,41 @@ func (cfg *apiConfig) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(dat)
+}
+
+func (cfg *apiConfig) HandlerReset(w http.ResponseWriter, r *http.Request) {
+	//We need to add admin access only here - verify user
+
+	//Here is a superficial solution that is not good
+	if os.Getenv("PLATFORM") != "dev" {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Printf("Unauthorized user attempted to reset users")
+		return
+	}
+
+	err := cfg.db.ResetUsers(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Error resetting db: %v\n", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Database reset"))
+}
+
+func (cfg *apiConfig) HandlerLogin(w http.ResponseWriter, r *http.Request) {
+	type Params struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	var params Params
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Printf("Failed to decode json: %v\n", err)
+		return
+	}
+	//This function is here to validate logins, so we need the auth package
 }

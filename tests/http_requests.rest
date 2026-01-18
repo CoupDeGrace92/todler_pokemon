@@ -14,3 +14,6 @@ Content-Type: application/json
 {
     "username": ""
 }
+
+#####
+DELETE http://localhost:8080/admin/reset
