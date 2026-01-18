@@ -1,0 +1,15 @@
+1. LOGIN function
+    - Give user the JWT and Refresh Token
+2. POKEMON parts of the db
+3. THEN WE GO CLIENT SIDE:
+    - Get random POKEMON
+    - Get specific POKEMON
+
+    SIMPLE WAY TO OPEN IMAGES "os/exec": 
+        cmd = exec.Command("xdg-open", imagePath)
+        err := cmd.Run()
+
+    After that, however, we probably want to implement through an external library
+    Our main choice right now: Ebitengine
+    We can also try to learn Fyne instead
+
