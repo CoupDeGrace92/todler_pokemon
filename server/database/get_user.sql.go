@@ -10,7 +10,7 @@ import (
 )
 
 const getUser = `-- name: GetUser :one
-SELECT id, created_at, updated_at, user_name FROM users
+SELECT id, created_at, updated_at, user_name, pass_hash FROM users
 WHERE user_name = $1
 `
 
@@ -22,6 +22,7 @@ func (q *Queries) GetUser(ctx context.Context, userName string) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UserName,
+		&i.PassHash,
 	)
 	return i, err
 }

@@ -16,7 +16,8 @@ import (
 )
 
 type apiConfig struct {
-	db *database.Queries
+	db     *database.Queries
+	Secret string
 }
 
 type User struct {
@@ -24,6 +25,8 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Username  string    `json:"username"`
+	Refresh   string    `json:"refresh_token"`
+	Token     string    `json:"token"`
 }
 
 func main() {
@@ -46,7 +49,8 @@ func main() {
 
 	//OUR HANDLERS ARE EMPTY - THIS CONFIG WILL BE IMPORTANT FOR DB INTERACTION
 	apiCfg := apiConfig{
-		db: dbQueries,
+		db:     dbQueries,
+		Secret: os.Getenv("JWT_SECRET"),
 	}
 
 	ServerMux := http.NewServeMux()

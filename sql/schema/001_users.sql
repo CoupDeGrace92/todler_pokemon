@@ -3,7 +3,8 @@ CREATE TABLE users(
     id UUID PRIMARY KEY,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    user_name TEXT UNIQUE NOT NULL
+    user_name TEXT UNIQUE NOT NULL,
+    pass_hash TEXT NOT NULL
 );
 
 -- +goose Down
