@@ -19,9 +19,9 @@ func (cfg *apiConfig) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var params parameters
+	var rawParams parameters
 
-	err := decoder.Decode(&params)
+	err := decoder.Decode(&rawParams)
 	if err != nil {
 		log.Printf("Error decoding params: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -29,12 +29,25 @@ func (cfg *apiConfig) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Password stuff would be here - check if empty, hash it and check against db
-	if params.Username == "" {
+	hash, err := auth.HashPassword(rawParams.Password)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Error getting password hash: %v", err)
+		return
+	}
+	//We need to add a password to create user - change the query
+
+	if rawParams.Username == "" {
 		log.Printf("Error: did not recieve a username\n")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	user, err := cfg.db.CreateUser(r.Context(), params.Username)
+
+	userParams := database.CreateUserParams{
+		UserName: rawParams.Username,
+		PassHash: hash,
+	}
+	user, err := cfg.db.CreateUser(r.Context(), userParams)
 	if err != nil {
 		log.Printf("Error creating user: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -61,7 +74,7 @@ func (cfg *apiConfig) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) HandlerReset(w http.ResponseWriter, r *http.Request) {
 	//We need to add admin access only here - verify user
 
-	//Here is a superficial solution that is not good
+	//Here is a superficial solution that is not good - used for scaffolding, remove for prod
 	if os.Getenv("PLATFORM") != "dev" {
 		w.WriteHeader(http.StatusUnauthorized)
 		log.Printf("Unauthorized user attempted to reset users")

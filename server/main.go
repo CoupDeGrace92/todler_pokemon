@@ -27,6 +27,7 @@ type User struct {
 	Username  string    `json:"username"`
 	Refresh   string    `json:"refresh_token"`
 	Token     string    `json:"token"`
+	Password  string    `json:"password"`
 }
 
 func main() {
@@ -57,6 +58,7 @@ func main() {
 
 	ServerMux.Handle("POST /api/register", http.HandlerFunc(apiCfg.HandlerNewUser))
 	ServerMux.Handle("DELETE /admin/reset", http.HandlerFunc(apiCfg.HandlerReset))
+	ServerMux.Handle("POST api/login", http.HandlerFunc(apiCfg.HandlerLogin))
 
 	server := &http.Server{
 		Handler: ServerMux,

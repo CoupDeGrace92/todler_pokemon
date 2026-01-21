@@ -13,15 +13,21 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, created_at, updated_at, user_name)
+INSERT INTO users (id, created_at, updated_at, user_name, pass_hash)
 VALUES (
     gen_random_uuid(),
     NOW(),
     NOW(),
-    $1
+    $1,
+    $2
 )
 RETURNING id, created_at, updated_at, user_name
 `
+
+type CreateUserParams struct {
+	UserName string
+	PassHash string
+}
 
 type CreateUserRow struct {
 	ID        uuid.UUID
@@ -30,8 +36,8 @@ type CreateUserRow struct {
 	UserName  string
 }
 
-func (q *Queries) CreateUser(ctx context.Context, userName string) (CreateUserRow, error) {
-	row := q.db.QueryRowContext(ctx, createUser, userName)
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
+	row := q.db.QueryRowContext(ctx, createUser, arg.UserName, arg.PassHash)
 	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,

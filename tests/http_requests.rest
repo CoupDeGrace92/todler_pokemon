@@ -17,3 +17,41 @@ Content-Type: application/json
 
 #####
 DELETE http://localhost:8080/admin/reset
+
+
+
+#####
+POST http://localhost:8080/api/register
+Content-Type: application/json
+
+{
+    "username": "TOO_OLD_FOR_POKEMON",
+    "password": "GET_MONEY"
+}
+
+#####
+POST http://localhost:8080/api/login
+Content-Type: application/json
+
+{
+    "username": "TOO_OLD_FOR_POKEMON",
+    "password": "GET_MONEY"
+}
+
+#####
+POST http://localhost:8080/api/login
+Content-Type: application/json
+
+{
+    "username": "IM_TWO",
+    "password": "GET_MONEY"
+}
+
+#####
+POST http://localhost:8080/api/login
+Content-Type: application/json
+
+{
+    "username": "TOO_OLD_FOR_POKEMON",
+    "password": "GET_KNOWLEDGE"
+}
