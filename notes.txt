@@ -13,3 +13,20 @@
     Our main choice right now: Ebitengine
     We can also try to learn Fyne instead
 
+
+
+Think about how we want to deal with storing the POKEMON
+    - DB storage
+    - Local only for temp testing or single use cases
+    - Do we want to use async delivery for multiplayer?
+
+
+
+CURRENT:
+0. Add cache to reduce stress on PokeAPI - see PokeDex/internal/pokecache.go for implementation
+1. Pokemon Teams DB
+2. Client Side - RANDOM CATCHING CHANCE
+    Once caught - fetch pokemon with pokeapi using our db, then store temp image locally
+    Defer deleting local temp files?  Or just keep them stored locally.
+3. Create REPL for commands, pokedex to look up users pokemon
+4. Add image pop-up
