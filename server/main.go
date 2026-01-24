@@ -58,7 +58,9 @@ func main() {
 
 	ServerMux.Handle("POST /api/register", http.HandlerFunc(apiCfg.HandlerNewUser))
 	ServerMux.Handle("DELETE /admin/reset", http.HandlerFunc(apiCfg.HandlerReset))
-	ServerMux.Handle("POST api/login", http.HandlerFunc(apiCfg.HandlerLogin))
+	ServerMux.Handle("POST /api/login", http.HandlerFunc(apiCfg.HandlerLogin))
+	ServerMux.Handle("POST /admin/poke/populate", http.HandlerFunc(apiCfg.HandlerPopulatePokeDB))
+	ServerMux.Handle("DELETE /admin/poke/reset", http.HandlerFunc(apiCfg.HandlerResetPokemon))
 
 	server := &http.Server{
 		Handler: ServerMux,

@@ -11,6 +11,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type Pokemon struct {
+	ID     int32
+	Name   string
+	Sprite string
+	Type   string
+	Url    string
+}
+
 type RefreshToken struct {
 	Token     string
 	CreatedAt time.Time

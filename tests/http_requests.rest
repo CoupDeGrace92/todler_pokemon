@@ -55,3 +55,10 @@ Content-Type: application/json
     "username": "TOO_OLD_FOR_POKEMON",
     "password": "GET_KNOWLEDGE"
 }
+
+#####
+POST http://localhost:8080/admin/poke/populate
+
+
+#####
+DELETE http://localhost:8080/admin/poke/reset
