@@ -28,6 +28,14 @@ type RefreshToken struct {
 	RevokedAt sql.NullTime
 }
 
+type Team struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UserName  string
+	Poke      string
+}
+
 type User struct {
 	ID        uuid.UUID
 	CreatedAt time.Time

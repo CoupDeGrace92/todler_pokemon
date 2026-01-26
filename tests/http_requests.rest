@@ -62,3 +62,41 @@ POST http://localhost:8080/admin/poke/populate
 
 #####
 DELETE http://localhost:8080/admin/poke/reset
+
+
+##### Testing Auth and Add Pokemon
+POST http://localhost:8080/api/register
+Content-Type: application/json
+
+{
+    "username": "AshKetchum",
+    "password": "gottacatchthemall"
+}
+
+###Login
+# @name login
+POST http://localhost:8080/api/login
+Content-Type: application/json
+
+{
+    "username": "AshKetchum",
+    "password": "gottacatchthemall"
+}
+
+####
+
+@JWTtoken = {{login.response.body.$.token}}
+@RefreshToken = {{login.response.body.$.refresh_token}}
+
+#####
+POST http://localhost:8080/api/teams
+Content-Type: application/json
+Authorization: Bearer {{JWTtoken}}
+
+{
+    "pokemon": ["pikachu", "rapidash"]
+}
+
+####
+GET http://localhost:8080/api/teams
+Authorization: Bearer {{JWTtoken}}

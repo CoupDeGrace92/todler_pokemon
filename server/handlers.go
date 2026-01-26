@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -68,8 +69,8 @@ func (cfg *apiConfig) HandlerNewUser(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 	w.Write(dat)
 }
 
@@ -164,8 +165,8 @@ func (cfg *apiConfig) HandlerLogin(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error adding refresh token to db: %v", err)
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(outUser)
 	if err != nil {
 		log.Printf("Error encoding user struct back to user: %s", err)
@@ -380,4 +381,135 @@ func (cfg *apiConfig) updateCache(name string, interval time.Duration) bool {
 		return false
 	}
 	return true
+}
+
+func (cfg *apiConfig) HandlerAddToTeam(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println("Error getting bearer token: ", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.Secret)
+	if err != nil {
+		log.Printf("Error validating token: %v\n", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	username, err := cfg.db.GetUserFromID(r.Context(), userID)
+	if err != nil {
+		log.Println("Error grabbing username from ID: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	type PokeResp struct {
+		Pokemon []string `json:"pokemon"`
+	}
+
+	var poke PokeResp
+	err = json.NewDecoder(r.Body).Decode(&poke)
+	if err != nil {
+
+	}
+	for _, p := range poke.Pokemon {
+		poke := strings.ToLower(p)
+		count, err := cfg.db.ValidatePokemon(r.Context(), poke)
+		if err != nil {
+			log.Printf("Error finding %s in database: %v\n", poke, err)
+			continue
+		} else if count == 0 {
+			log.Printf("%s is not a pokemon in the database\n", poke)
+			continue
+		}
+
+		params := database.AddPokemonToTeamParams{
+			UserName: username,
+			Poke:     p,
+		}
+
+		err = cfg.db.AddPokemonToTeam(r.Context(), params)
+		if err != nil {
+			log.Printf("Error adding %s to %s's team: %v \n", params.Poke, params.UserName, err)
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Team added to database"))
+}
+
+func (cfg *apiConfig) HandlerGetTeam(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Println("Error getting bearer jwt token: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.Secret)
+	if err != nil {
+		log.Println("Error validating jwt token: ", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	user, err := cfg.db.GetUserFromID(r.Context(), userID)
+	if err != nil {
+		log.Println("Error getting user from db: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	team, err := cfg.db.GetTeam(r.Context(), user)
+	if err != nil {
+		log.Println("Error getting team from db: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	type P struct {
+		Id     int32  `json:"id"`
+		Name   string `json:"name"`
+		Sprite string `json:"sprite_url"`
+		Types  string `json:"types"`
+		Url    string `json:"url"`
+	}
+
+	type Team struct {
+		Pokemon   []P       `json:"pokemon"`
+		FetchedAt time.Time `json:"fetched_at"`
+	}
+
+	var pokemon []P
+	fetch := time.Now()
+	outTeam := Team{
+		Pokemon:   pokemon,
+		FetchedAt: fetch,
+	}
+	for _, p := range team {
+		pObject, err := cfg.db.GetPokeByName(r.Context(), p.Poke)
+		if err != nil {
+			log.Printf("Error getting pokemon entry for %v: %v\n", p.Poke, err)
+			continue
+		}
+
+		cleanedPoke := P{
+			Id:     pObject.ID,
+			Name:   pObject.Name,
+			Sprite: pObject.Sprite,
+			Types:  pObject.Type,
+			Url:    pObject.Url,
+		}
+		outTeam.Pokemon = append(outTeam.Pokemon, cleanedPoke)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(outTeam)
+	if err != nil {
+		log.Println("Error encoding team into a json: ", err)
+	}
 }

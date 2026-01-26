@@ -91,7 +91,7 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", fmt.Errorf("No values in the authorization header")
 	}
 	parts := strings.Fields(authValues[0])
-	if len(parts) != 2 || parts[0] != "bearer" {
+	if len(parts) != 2 || parts[0] != "Bearer" {
 		return "", fmt.Errorf("Missing or improperly formatted/headed token: %s", authValues[0])
 	}
 	token := parts[1]

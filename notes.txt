@@ -1,12 +1,10 @@
-1. LOGIN function
-    - Give user the JWT and Refresh Token
-2. POKEMON parts of the db
-3. THEN WE GO CLIENT SIDE:
+2. Pokemon side (Still have pokemon teams left)
+3. THEN WE GO CLIENT SIDZE:
     - Get random POKEMON
     - Get specific POKEMON
 
     SIMPLE WAY TO OPEN IMAGES "os/exec": 
-        cmd = exec.Command("xdg-open", imagePath)
+        cmd = exec.CommanZd("xdg-open", imagePath)
         err := cmd.Run()
 
     After that, however, we probably want to implement through an external library
@@ -30,3 +28,8 @@ CURRENT:
     Defer deleting local temp files?  Or just keep them stored locally.
 3. Create REPL for commands, pokedex to look up users pokemon
 4. Add image pop-up
+
+CURRENT: WE ADDED CACHE - WE ARE IN THE MIDDLE OF IMPLEMENTING
+    -Add to apiConfig struct DONE
+    -If cache exists helper NOT DONE (check based on key, key caches to the API endpoint it calls)
+    -Add cache for any pokeapi interaction NOT DONE
