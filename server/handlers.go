@@ -4,6 +4,7 @@ import (
 	"context"
 	"coupdegrace92/pokemon_for_todlers/auth"
 	"coupdegrace92/pokemon_for_todlers/server/database"
+	"coupdegrace92/pokemon_for_todlers/shared"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -242,6 +243,37 @@ func typesToString(t []PokeType) string {
 func (cfg *apiConfig) addPokeToDB(id int) error {
 	strId := strconv.Itoa(id)
 	urlBase := "http://pokeapi.co/api/v2/pokemon/" + strId
+
+	exist := cfg.updateCache("pokeAPI", time.Minute*30)
+	cfg.Caches["pokeAPI"].Mu.Lock()
+	defer cfg.Caches["pokeAPI"].Mu.Unlock()
+	if exist {
+		c := cfg.Caches["pokeAPI"]
+		if entry, ok := c.CacheItems[strId]; ok {
+			poke := entry.Val
+			var p Poke
+			err := json.Unmarshal(poke, &p)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			params := database.AddPokemonParams{
+				ID:     int32(id),
+				Name:   p.Name,
+				Sprite: p.Sprites.Front,
+				Type:   typesToString(p.Types),
+				Url:    urlBase,
+			}
+			err = cfg.db.AddPokemon(context.Background(), params)
+			if err != nil {
+				log.Printf("Error adding pokemon %v to db: %v\n", params.Name, err)
+				return err
+			}
+			return nil
+		}
+	}
+
 	resp, err := http.Get(urlBase)
 	if err != nil {
 		log.Println(err)
@@ -266,6 +298,14 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 		log.Printf("Error decoding response: %v\n", err)
 		return err
 	}
+
+	byteSlice, err := json.Marshal(p)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	cfg.Caches["pokeAPI"].Add(strId, byteSlice)
 
 	params := database.AddPokemonParams{
 		ID:     int32(id),
@@ -330,4 +370,14 @@ func (cfg *apiConfig) HandlerResetPokemon(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Pokemon DB reset"))
+}
+
+func (cfg *apiConfig) updateCache(name string, interval time.Duration) bool {
+	_, ok := cfg.Caches[name]
+	if !ok {
+		cache := shared.NewCache(interval)
+		cfg.Caches[name] = cache
+		return false
+	}
+	return true
 }

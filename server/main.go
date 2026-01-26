@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"coupdegrace92/pokemon_for_todlers/server/database"
+	"coupdegrace92/pokemon_for_todlers/shared"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -18,6 +19,7 @@ import (
 type apiConfig struct {
 	db     *database.Queries
 	Secret string
+	Caches map[string]*shared.Cache
 }
 
 type User struct {
@@ -49,9 +51,11 @@ func main() {
 	dbQueries := database.New(db)
 
 	//OUR HANDLERS ARE EMPTY - THIS CONFIG WILL BE IMPORTANT FOR DB INTERACTION
+	caches := make(map[string]*shared.Cache)
 	apiCfg := apiConfig{
 		db:     dbQueries,
 		Secret: os.Getenv("JWT_SECRET"),
+		Caches: caches,
 	}
 
 	ServerMux := http.NewServeMux()
