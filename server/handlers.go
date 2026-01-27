@@ -7,6 +7,7 @@ import (
 	"coupdegrace92/pokemon_for_todlers/shared"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -180,6 +181,7 @@ type Poke struct {
 	Types   []PokeType  `json:"types"`
 	Sprites PokeSprites `json:"sprites"`
 	Url     string
+	Xp      int `json:"base_experience"`
 }
 
 type PokeType struct {
@@ -265,6 +267,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 				Sprite: p.Sprites.Front,
 				Type:   typesToString(p.Types),
 				Url:    urlBase,
+				BaseXp: int32(p.Xp),
 			}
 			err = cfg.db.AddPokemon(context.Background(), params)
 			if err != nil {
@@ -314,6 +317,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 		Sprite: p.Sprites.Front,
 		Type:   typesToString(p.Types),
 		Url:    urlBase,
+		BaseXp: int32(p.Xp),
 	}
 
 	err = cfg.db.AddPokemon(context.Background(), params)
@@ -512,4 +516,169 @@ func (cfg *apiConfig) HandlerGetTeam(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error encoding team into a json: ", err)
 	}
+}
+
+func (cfg *apiConfig) HandlerGetPokemon(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Println("Error getting token from request: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err = auth.ValidateJWT(token, cfg.Secret)
+	if err != nil {
+		log.Println("Unauthourized request: ", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	cTypeHeader := r.Header["Content-Type"]
+	if len(cTypeHeader) == 0 {
+		log.Println("No Content-Type header")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Please include Content-Type header specifying text/plain"))
+		return
+	}
+	parts := strings.Fields(cTypeHeader[0])
+	cType := strings.TrimSuffix(parts[0], ";")
+	if cType != "text/plain" {
+		log.Println("Content-Type not text/plain")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Please send only Content-Type: text/plain to this endpoint"))
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Can not read request")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error: Can not read request"))
+		return
+	}
+
+	pokemon := string(bodyBytes)
+	pokeID, err := strconv.Atoi(pokemon)
+	if err != nil {
+		p, err := cfg.db.GetPokeByName(r.Context(), pokemon)
+		if err != nil {
+			log.Println("Error getting pokemon from db")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(fmt.Sprintf("Error retrieving %s from the database", pokemon)))
+			return
+		}
+
+		type resp struct {
+			Id     int32  `json:"id"`
+			Name   string `json:"name"`
+			Sprite string `json:"sprite_url"`
+			Types  string `json:"types"`
+			Url    string `json:"pokeapi_url"`
+			BaseXp int32  `json:"base_xp"`
+		}
+
+		finalResp := resp{
+			Id:     p.ID,
+			Name:   p.Name,
+			Sprite: p.Sprite,
+			Types:  p.Type,
+			Url:    p.Url,
+			BaseXp: p.BaseXp,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		err = json.NewEncoder(w).Encode(finalResp)
+		if err != nil {
+			log.Println("Error encoding pokeresponse struct")
+		}
+		return
+	}
+	p, err := cfg.db.GetPokeByID(r.Context(), int32(pokeID))
+	if err != nil {
+		log.Println("Error getting pokemon from db")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("Error retrieving %s from the database", pokemon)))
+		return
+	}
+
+	type resp struct {
+		Id     int32  `json:"id"`
+		Name   string `json:"name"`
+		Sprite string `json:"sprite_url"`
+		Types  string `json:"types"`
+		Url    string `json:"pokeapi_url"`
+		BaseXp int32  `json:"base_xp"`
+	}
+
+	finalResp := resp{
+		Id:     p.ID,
+		Name:   p.Name,
+		Sprite: p.Sprite,
+		Types:  p.Type,
+		Url:    p.Url,
+		BaseXp: p.BaseXp,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(finalResp)
+	if err != nil {
+		log.Println("Error encoding pokeresponse struct")
+	}
+}
+
+func (cfg *apiConfig) HandlerResetTeams(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("PLATFORM") != "dev" {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Println("Unauthorized user tried to reset teams db")
+		return
+	}
+
+	err := cfg.db.ResetTeams(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Error resetting teams db: ", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Pokemon teams db reset"))
+}
+
+func (cfg *apiConfig) HandlerResetUserTeams(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Println("Unauthourized attempt to delete a users pokemon")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.Secret)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Println("Unauthourized attempt to delete a users pokemon")
+		return
+	}
+
+	username, err := cfg.db.GetUserFromID(r.Context(), userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Error retrieving username from db for userid: ", userID)
+		return
+	}
+
+	user := r.PathValue("user")
+	if username != user {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	err = cfg.db.ResetUserTeam(r.Context(), user)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Error resetting %s's team\n", user)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Succesfully reset users caught pokemon"))
 }

@@ -30,7 +30,17 @@ func ClientWelcome() {
 	fmt.Println("catch              |-r:  random mode        |Will catch a pokemon, a random one")
 	fmt.Println("                   |<pokemon>:              |if -r is specified, else <pokemon>")
 	fmt.Println("quit               |None                    |Will exit p4t                     ")
+	fmt.Println("reset              |None                    |Resets caught pokemon to none     ")
 
 	fmt.Println()
 	fmt.Println()
+}
+
+func catchRandom() (id int) {
+	//Generate weighted indicies
+	//Get last num, slice of first indicies
+	// rand.Intn(last num)
+	//Then search the int slice for the subset in which the rand resides
+	//first, we have to update the db to include base xp values, update queries to return those as well, and update handlers
+	return 0
 }

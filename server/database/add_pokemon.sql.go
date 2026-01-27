@@ -10,13 +10,14 @@ import (
 )
 
 const addPokemon = `-- name: AddPokemon :exec
-INSERT INTO pokemon(id, name, sprite, type, url)
+INSERT INTO pokemon(id, name, sprite, type, url, base_xp)
 VALUES(
     $1,
     $2,
     $3,
     $4,
-    $5
+    $5,
+    $6
 )
 `
 
@@ -26,6 +27,7 @@ type AddPokemonParams struct {
 	Sprite string
 	Type   string
 	Url    string
+	BaseXp int32
 }
 
 func (q *Queries) AddPokemon(ctx context.Context, arg AddPokemonParams) error {
@@ -35,6 +37,7 @@ func (q *Queries) AddPokemon(ctx context.Context, arg AddPokemonParams) error {
 		arg.Sprite,
 		arg.Type,
 		arg.Url,
+		arg.BaseXp,
 	)
 	return err
 }

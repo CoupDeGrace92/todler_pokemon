@@ -17,6 +17,7 @@ type Pokemon struct {
 	Sprite string
 	Type   string
 	Url    string
+	BaseXp int32
 }
 
 type RefreshToken struct {
