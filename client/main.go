@@ -3,9 +3,12 @@ package main
 import (
 	gl "coupdegrace92/pokemon_for_todlers/gamelogic"
 	"fmt"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	_ = godotenv.Load("client/.env")
 	fmt.Println("Welcome to P4T!")
 	fmt.Println("Please enter your username: ")
 	user := gl.GetInput()
@@ -33,6 +36,12 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 		case "quit":
 			fmt.Println("Exiting P4T...")
 			break repl
+		case "catch":
+			pokeID := 0
+			if cmd[1] == "-r" {
+				pokeID = gl.CatchRandom()
+				fmt.Println("CATCHING POKEMON ", pokeID)
+			}
 		default:
 			fmt.Println("Error: Unrecognized Command")
 		}

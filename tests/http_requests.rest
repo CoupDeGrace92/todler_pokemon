@@ -68,3 +68,8 @@ Content-Type: text/plain
 ####
 DELETE http://localhost:8080/api/teams/AshKetchum
 Authorization: Bearer {{JWTtoken}}
+
+
+####
+GET http://localhost:8080/api/pokemon/weights
+Authorization: Bearer {{JWTtoken}}

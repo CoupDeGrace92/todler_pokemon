@@ -682,3 +682,84 @@ func (cfg *apiConfig) HandlerResetUserTeams(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Succesfully reset users caught pokemon"))
 }
+
+func (cfg *apiConfig) HandlerGetWeightedIds(w http.ResponseWriter, r *http.Request) {
+	exists := cfg.updateCache("index", time.Hour)
+	cfg.Caches["index"].Mu.Lock()
+	defer cfg.Caches["index"].Mu.Unlock()
+	var index []int
+	if exists {
+		c := cfg.Caches["index"]
+		if wIndex, ok := c.CacheItems["weightedIndex"]; ok {
+			rawCSVStr := string(wIndex.Val)
+			strSlice := strings.Fields(rawCSVStr)
+			var rawInts []int
+			for _, i := range strSlice {
+				x, err := strconv.Atoi(strings.TrimSuffix(i, ","))
+				if err != nil {
+					log.Println("Error converting string to int: ", err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				rawInts = append(rawInts, x)
+			}
+			index = rawInts
+		}
+
+	}
+	//We need to check the existance of "weightedIndex" subCaches
+	c := cfg.Caches["index"]
+	_, ok := c.CacheItems["weightedIndex"]
+	if !ok {
+		c.CacheItems["weightedIndex"] = &shared.CacheEntry{}
+	}
+
+	if index == nil {
+		last := 0
+		count, err := cfg.db.NumPokemon(r.Context())
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Println("Error getting pokemon count")
+			return
+		}
+		for i := 1; i <= int(count); i++ {
+			poke, err := cfg.db.GetPokeByID(r.Context(), int32(i))
+			if err != nil {
+				log.Printf("Error getting pokemon with id %v from the db\n", i)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			xp := poke.BaseXp
+			if xp > 400 {
+				xp = 400
+			}
+			normalized := int((410 - xp) / 4)
+			inclusiveEnd := last + normalized
+			last = inclusiveEnd
+			index = append(index, inclusiveEnd)
+		}
+		//Now we want to add those values to the cache
+		//The weighted index needs to be converted into a comma delimated format with spaces
+		cacheIndexStr := ""
+		for _, x := range index {
+			strx := strconv.Itoa(x)
+			modstr := strx + ", "
+			cacheIndexStr += modstr
+		}
+
+		wIndexCache := c.CacheItems["weightedIndex"]
+		wIndexCache.Val = []byte(cacheIndexStr)
+		wIndexCache.CreatedAt = time.Now()
+	}
+
+	type Resp struct {
+		WeightedEnds []int
+	}
+	resp := Resp{
+		WeightedEnds: index,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}

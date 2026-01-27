@@ -70,6 +70,7 @@ func main() {
 	ServerMux.Handle("GET /api/pokemon", http.HandlerFunc(apiCfg.HandlerGetPokemon))
 	ServerMux.Handle("DELETE /api/teams/{user}", http.HandlerFunc(apiCfg.HandlerResetUserTeams))
 	ServerMux.Handle("DELETE /admin/teams/reset", http.HandlerFunc(apiCfg.HandlerResetTeams))
+	ServerMux.Handle("GET /api/pokemon/weights", http.HandlerFunc(apiCfg.HandlerGetWeightedIds))
 
 	server := &http.Server{
 		Handler: ServerMux,
