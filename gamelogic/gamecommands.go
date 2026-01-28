@@ -2,6 +2,7 @@ package gamelogic
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -111,10 +112,101 @@ func UpdateEnvFile(path, key, value string) error {
 }
 
 func Register(user, pass string) error {
+	rawurl := os.Getenv("SERVER_URL")
+	url := rawurl + "/api/register"
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	//WE HAVE TO BUILD THE BODY HERE
+	type Request struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	r := Request{
+		Username: user,
+		Password: pass,
+	}
+	rBytes, err := json.Marshal(r)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(rBytes))
+	if err != nil {
+		log.Printf("Error creating request")
+		return err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error getting response from client for registration req: ", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Returned status not okay: ", resp.Status)
+		return nil
+	}
 	return nil
 }
 
 func Login(user, pass string) error {
+	rawurl := os.Getenv("SERVER_URL")
+	url := rawurl + "/api/login"
+	client := &http.Client{
+		Timeout: time.Second * 20,
+	}
+	type Request struct {
+		Username string `json:"username"`
+		Pass     string `json:"password"`
+	}
+	r := Request{
+		Username: user,
+		Pass:     pass,
+	}
+
+	rBytes, err := json.Marshal(r)
+	if err != nil {
+		fmt.Println("Error marshalling json: ", err)
+		return err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(rBytes))
+	if err != nil {
+		fmt.Println("Error creating request: ", err)
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error getting response from server: ", err)
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Response status not okay: ", resp.Status)
+		return nil
+	}
+
+	type Tokens struct {
+		JWT     string `json:"token"`
+		Refresh string `json:"refresh_token"`
+	}
+	var t Tokens
+	err = json.NewDecoder(resp.Body).Decode(&t)
+	if err != nil {
+		fmt.Println("Error decoding token jsons: ", err)
+		return err
+	}
+	err = UpdateEnvFile("./client/.env", "JWT", t.JWT)
+	if err != nil {
+		fmt.Println("Error moving JWT to env file: ", err)
+	}
+	err = UpdateEnvFile("./client/.env", "REFRESH_TOKEN", t.Refresh)
+	if err != nil {
+		fmt.Println("Error moving refresh to env file: ", err)
+		return err
+	}
+
 	return nil
 }
 

@@ -247,12 +247,14 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 	strId := strconv.Itoa(id)
 	urlBase := "http://pokeapi.co/api/v2/pokemon/" + strId
 
+	fmt.Println("Checking Cache")
 	exist := cfg.updateCache("pokeAPI", time.Minute*30)
-	cfg.Caches["pokeAPI"].Mu.Lock()
-	defer cfg.Caches["pokeAPI"].Mu.Unlock()
 	if exist {
 		c := cfg.Caches["pokeAPI"]
-		if entry, ok := c.CacheItems[strId]; ok {
+		c.Mu.Lock()
+		entry, ok := c.CacheItems[strId]
+		c.Mu.Unlock()
+		if ok {
 			poke := entry.Val
 			var p Poke
 			err := json.Unmarshal(poke, &p)
@@ -269,6 +271,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 				Url:    urlBase,
 				BaseXp: int32(p.Xp),
 			}
+			fmt.Println("adding pokemon from cache")
 			err = cfg.db.AddPokemon(context.Background(), params)
 			if err != nil {
 				log.Printf("Error adding pokemon %v to db: %v\n", params.Name, err)
@@ -278,6 +281,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 		}
 	}
 
+	fmt.Println("getting pokemon from pokeapi")
 	resp, err := http.Get(urlBase)
 	if err != nil {
 		log.Println(err)
@@ -287,6 +291,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 
 	if resp.StatusCode == http.StatusNotFound {
 		err = fmt.Errorf("NOT FOUND")
+		fmt.Println(err)
 		return err
 	}
 
@@ -309,6 +314,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 		return err
 	}
 
+	fmt.Println("Adding pokemon to cache")
 	cfg.Caches["pokeAPI"].Add(strId, byteSlice)
 
 	params := database.AddPokemonParams{
@@ -319,7 +325,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 		Url:    urlBase,
 		BaseXp: int32(p.Xp),
 	}
-
+	fmt.Println("Adding pokemon to db")
 	err = cfg.db.AddPokemon(context.Background(), params)
 	if err != nil {
 		log.Println(err)
@@ -330,6 +336,7 @@ func (cfg *apiConfig) addPokeToDB(id int) error {
 }
 
 func (cfg *apiConfig) HandlerPopulatePokeDB(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Attempting to populate pokemon db")
 	if os.Getenv("PLATFORM") != "dev" {
 		w.WriteHeader(http.StatusUnauthorized)
 		log.Println("Unauthorized user tried to populate pokemon db")
@@ -342,6 +349,7 @@ func (cfg *apiConfig) HandlerPopulatePokeDB(w http.ResponseWriter, r *http.Reque
 		log.Println("Error getting the count of pokemon: ", err)
 		return
 	}
+	fmt.Println(count)
 
 	for i := 1; i <= count; i++ {
 		err = cfg.addPokeToDB(i)
@@ -353,6 +361,7 @@ func (cfg *apiConfig) HandlerPopulatePokeDB(w http.ResponseWriter, r *http.Reque
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(fmt.Sprintf("Pokemon db populated, max pokemon: %v", i-1)))
 		}
+		fmt.Println(i)
 	}
 
 	w.WriteHeader(http.StatusOK)

@@ -41,6 +41,7 @@ func main() {
 	fmt.Println("Spinning up server")
 
 	dbURL := os.Getenv("DB_URL")
+	fmt.Println(dbURL)
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
