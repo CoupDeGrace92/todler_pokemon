@@ -20,15 +20,19 @@ func main() {
 		u := gl.GetInput()
 		fmt.Println("Please enter desired password")
 		p := gl.GetInput()
-		for i := 0; i < 4; i++ {
+		for i := 0; i < 7; i++ {
 			fmt.Printf("\033[1A\033[K") //ASCII escape codes to go up a line and delete it
 		}
 		if len(u[0]) == 0 || len(p[0]) == 0 {
 			fmt.Println("Must enter a username and password")
 		}
-		err := gl.Register(u[0], p[0])
+		err, s := gl.Register(u[0], p[0])
 		if err != nil {
 			log.Println(err)
+			return
+		}
+		if s != true {
+			fmt.Println("Failed to register: Goodbye!")
 			return
 		}
 	}
@@ -47,9 +51,13 @@ func main() {
 	for i := 0; i < 4; i++ {
 		fmt.Printf("\033[1A\033[K") //ASCII escape codes to go up a line and delete it
 	}
-	err := gl.Login(user[0], pass[0])
+	err, s := gl.Login(user[0], pass[0])
 	if err != nil {
 		fmt.Println("Error logging in: ", err)
+	}
+	if s != true {
+		fmt.Println("Failed to login - Goodbye!")
+		return
 	}
 
 	gl.ClientWelcome()

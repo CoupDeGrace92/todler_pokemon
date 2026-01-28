@@ -111,7 +111,7 @@ func UpdateEnvFile(path, key, value string) error {
 	return godotenv.Write(envMap, path)
 }
 
-func Register(user, pass string) error {
+func Register(user, pass string) (outerror error, success bool) {
 	rawurl := os.Getenv("SERVER_URL")
 	url := rawurl + "/api/register"
 	client := &http.Client{
@@ -131,25 +131,25 @@ func Register(user, pass string) error {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(rBytes))
 	if err != nil {
 		log.Printf("Error creating request")
-		return err
+		return err, false
 	}
 
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error getting response from client for registration req: ", err)
-		return err
+		return err, false
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusAccepted {
 		log.Println("Returned status not okay: ", resp.Status)
-		return nil
+		return nil, false
 	}
-	return nil
+	return nil, true
 }
 
-func Login(user, pass string) error {
+func Login(user, pass string) (outerror error, success bool) {
 	rawurl := os.Getenv("SERVER_URL")
 	url := rawurl + "/api/login"
 	client := &http.Client{
@@ -167,24 +167,24 @@ func Login(user, pass string) error {
 	rBytes, err := json.Marshal(r)
 	if err != nil {
 		fmt.Println("Error marshalling json: ", err)
-		return err
+		return err, false
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(rBytes))
 	if err != nil {
 		fmt.Println("Error creating request: ", err)
-		return err
+		return err, false
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error getting response from server: ", err)
-		return err
+		return err, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("Response status not okay: ", resp.Status)
-		return nil
+		return nil, false
 	}
 
 	type Tokens struct {
@@ -195,21 +195,77 @@ func Login(user, pass string) error {
 	err = json.NewDecoder(resp.Body).Decode(&t)
 	if err != nil {
 		fmt.Println("Error decoding token jsons: ", err)
-		return err
+		return err, false
 	}
 	err = UpdateEnvFile("./client/.env", "JWT", t.JWT)
 	if err != nil {
 		fmt.Println("Error moving JWT to env file: ", err)
+		return err, false
 	}
 	err = UpdateEnvFile("./client/.env", "REFRESH_TOKEN", t.Refresh)
 	if err != nil {
 		fmt.Println("Error moving refresh to env file: ", err)
-		return err
+		return err, false
 	}
 
-	return nil
+	return nil, true
 }
 
-func GetPokemon(id int) error {
-	return nil
+func GetPokemon(id string) (Pokemon, error) {
+	rawurl := os.Getenv("SERVER_URL")
+	url := rawurl + "/api/pokemon"
+	client := &http.Client{
+		Timeout: time.Second * 20,
+	}
+
+	body := []byte(id)
+
+	req, err := http.NewRequest("GET", url, bytes.NewBuffer(body))
+	if err != nil {
+		x := fmt.Sprintf("Error generating request: %s\n", err)
+		fmt.Print(x)
+		err = fmt.Errorf(x)
+		return Pokemon{}, err
+	}
+	token := os.Getenv("JWT")
+	req.Header.Set("Content-Type", "text/plain")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error getting server response")
+		return Pokemon{}, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("Error: Status code not ok: %v\n", resp.Status)
+		return Pokemon{}, err
+	}
+
+	var poke RecievedPokemon
+	if err = json.NewDecoder(resp.Body).Decode(&poke); err != nil {
+		fmt.Println("Error decoding json: ", err)
+		return Pokemon{}, err
+	}
+	//TYPE LIST HERE - csv delimated, use fields strip trailing comma
+	var typeList []string
+	uncleanedList := strings.Fields(poke.Types)
+	for _, j := range uncleanedList {
+		cleaned := strings.TrimLeft(j, ",")
+		typeList = append(typeList, cleaned)
+	}
+	//SPRITE LIST HERE
+	spriteList := make(map[string]string)
+	//currently there is only a single string that goes in here - we will modify when we include back sprite
+	spriteList["front"] = poke.Sprites
+
+	cleanedPoke := Pokemon{
+		Id:      int(poke.Id),
+		Name:    poke.Name,
+		Types:   typeList,
+		Sprites: spriteList,
+		Url:     poke.Url,
+		Xp:      int(poke.Xp),
+	}
+
+	return cleanedPoke, nil
 }
