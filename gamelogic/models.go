@@ -13,7 +13,7 @@ type Pokemon struct {
 	Id      int
 	Name    string
 	Types   []string
-	Sprites []string
+	Sprites map[string]string
 	Url     string
 	Xp      int
 }

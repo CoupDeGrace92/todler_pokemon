@@ -35,9 +35,10 @@ func ClientWelcome() {
 	fmt.Println("A list of supported commands:")
 	fmt.Println()
 	fmt.Println("Name               |Args                    |Usage                             ")
-	fmt.Println("_______________________________________________________________________________")
+	fmt.Println("__________________________________________________________________________________")
 	fmt.Println("catch              |-r:  random mode        |Will catch a pokemon, a random one")
 	fmt.Println("                   |<pokemon>:              |if -r is specified, else <pokemon>")
+	fmt.Println("pokedex            |None                    |Will display pokemon caught and count")
 	fmt.Println("quit               |None                    |Will exit p4t                     ")
 	fmt.Println("reset              |None                    |Resets caught pokemon to none     ")
 
@@ -268,4 +269,61 @@ func GetPokemon(id string) (Pokemon, error) {
 	}
 
 	return cleanedPoke, nil
+}
+
+func AddToMap(name string, pokeMap map[string]int) {
+	count, ok := pokeMap[name]
+	if !ok {
+		pokeMap[name] = 1
+		return
+	}
+	pokeMap[name] = count + 1
+}
+
+func Reset(user string) {
+	rawurl := os.Getenv("SERVER_URL")
+	url := rawurl + "/api/teams/" + user
+	client := http.Client{
+		Timeout: time.Second * 20,
+	}
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		log.Println("Error resetting users teams: ", err)
+		return
+	}
+
+	token := os.Getenv("JWT")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error sending request: ", err)
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error: status was not OK: ", resp.Status)
+		return
+	}
+}
+
+func DisplayPokedex(pokedex map[string]int) {
+	//Thinking this through - I want to create a list of all pokemon in the pokedex, then sort it alphabetically
+	var pokeList []string
+	for i := range pokedex {
+		pokeList = append(pokeList, i)
+	}
+	sort.Strings(pokeList)
+	fmt.Println("\033[31m___________________________________________________________\033[0m")
+	fmt.Println("Pokemon\033[31m                       |\033[0mcount\033[31m                       \033[0m")
+	fmt.Println("\033[31m___________________________________________________________\033[0m")
+	//30 characters left of |
+	for _, poke := range pokeList {
+		spaces := ""
+		num := len(poke)
+		for i := 0; i < 30-num; i++ {
+			spaces += " "
+		}
+		fmt.Printf("%s%s\033[31m|\033[0m%v\n", poke, spaces, pokedex[poke])
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"log"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -61,7 +62,12 @@ func main() {
 	}
 
 	gl.ClientWelcome()
-	//LOGIN HANDLER HERE
+
+	//Here we are going to get the states for the user:
+	//Teams
+	pokedex := make(map[string]int)
+	//We need to update server side to store teams in a better way
+	newPoke := make(map[string]int)
 
 repl: //This is so we can break the outerloop insteaad of the switch statement
 	for {
@@ -75,7 +81,37 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 			if cmd[1] == "-r" {
 				pokeID = gl.CatchRandom()
 				fmt.Println("CATCHING POKEMON ", pokeID)
+				strID := strconv.Itoa(pokeID)
+				poke, err := gl.GetPokemon(strID)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				fmt.Println("CAUGHT: ", poke.Name)
+				gl.AddToMap(poke.Name, pokedex)
+				gl.AddToMap(poke.Name, newPoke)
+				continue
 			}
+			poke, err := gl.GetPokemon(cmd[1])
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println("CAUGHT: ", poke.Name)
+			gl.AddToMap(poke.Name, pokedex)
+			gl.AddToMap(poke.Name, newPoke)
+		case "reset":
+			fmt.Println("About to reset user team, are you sure? [y/n]")
+			confirm := gl.GetInput()
+			if confirm[0] != "y" && confirm[0] != "yes" {
+				continue
+			}
+			fmt.Println("Okay - deleting users pokedex - goodluck on your new journey!")
+			gl.Reset(user[0])
+			pokedex = make(map[string]int)
+			newPoke = make(map[string]int)
+		case "pokedex":
+			gl.DisplayPokedex(pokedex)
 		default:
 			fmt.Println("Error: Unrecognized Command")
 		}
