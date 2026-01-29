@@ -237,6 +237,7 @@ func GetPokemon(id string) (Pokemon, error) {
 		fmt.Println("Error getting server response")
 		return Pokemon{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Error: Status code not ok: %v\n", resp.Status)
 		return Pokemon{}, err
@@ -301,6 +302,7 @@ func Reset(user string) {
 		log.Println("Error sending request: ", err)
 		return
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Error: status was not OK: ", resp.Status)
 		return
@@ -326,4 +328,71 @@ func DisplayPokedex(pokedex map[string]int) {
 		}
 		fmt.Printf("%s%s\033[31m|\033[0m%v\n", poke, spaces, pokedex[poke])
 	}
+}
+
+func GetTeam() ([]RecievedPokemon, error) {
+	rawurl := os.Getenv("SERVER_URL")
+	url := rawurl + "/api/teams"
+	client := http.Client{
+		Timeout: time.Second * 20,
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Println("Error creating request ", err)
+		return nil, err
+	}
+	token := os.Getenv("JWT")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error sending request ", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Response status not OK: ", resp.Status)
+		return nil, err
+	}
+
+	type Team struct {
+		Pokemon   []RecievedPokemon `json:"pokemon"`
+		FetchedAt time.Time         `json:"fetched_at"`
+	}
+
+	var rawOut Team
+	if err = json.NewDecoder(resp.Body).Decode(&rawOut); err != nil {
+		fmt.Println("Error decoding JSON: ", err)
+		return nil, err
+	}
+	out := rawOut.Pokemon
+	return out, nil
+}
+
+func UpdateTeam(pokedex map[string]int) error {
+	rawurl := os.Getenv("SERVER_URL")
+	url := rawurl + "/api/teams"
+	client := http.Client{
+		Timeout: time.Second * 20,
+	}
+	rawBytes, err := json.Marshal(pokedex)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(rawBytes))
+	if err != nil {
+		log.Println("Error creating request ", err)
+		return err
+	}
+	token := os.Getenv("JWT")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error processing request: ", err)
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Response status not OK: ", resp.Status)
+	}
+	return nil
 }

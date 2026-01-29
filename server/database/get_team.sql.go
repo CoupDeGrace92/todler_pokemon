@@ -10,7 +10,7 @@ import (
 )
 
 const getTeam = `-- name: GetTeam :many
-SELECT id, created_at, updated_at, user_name, poke FROM teams
+SELECT user_name, created_at, updated_at, poke, count FROM teams
 WHERE user_name = $1
 `
 
@@ -24,11 +24,11 @@ func (q *Queries) GetTeam(ctx context.Context, userName string) ([]Team, error) 
 	for rows.Next() {
 		var i Team
 		if err := rows.Scan(
-			&i.ID,
+			&i.UserName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.UserName,
 			&i.Poke,
+			&i.Count,
 		); err != nil {
 			return nil, err
 		}

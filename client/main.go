@@ -64,9 +64,15 @@ func main() {
 	gl.ClientWelcome()
 
 	//Here we are going to get the states for the user:
-	//Teams
 	pokedex := make(map[string]int)
-	//We need to update server side to store teams in a better way
+	userPokes, err := gl.GetTeam()
+	if err != nil {
+		log.Println("Error getting users pokemon: ", err)
+	}
+	for _, poke := range userPokes {
+		gl.AddToMap(poke.Name, pokedex)
+	}
+
 	newPoke := make(map[string]int)
 
 repl: //This is so we can break the outerloop insteaad of the switch statement
@@ -74,6 +80,11 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 		cmd := gl.GetInput()
 		switch cmd[0] {
 		case "quit":
+			fmt.Println("Saving pokedex...")
+			err = gl.UpdateTeam(newPoke)
+			if err != nil {
+				fmt.Println("Error saving pokedex: ", err)
+			}
 			fmt.Println("Exiting P4T...")
 			break repl
 		case "catch":

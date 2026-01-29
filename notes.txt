@@ -1,41 +1,25 @@
-2. Pokemon side (Still have pokemon teams left)
-3. THEN WE GO CLIENT SIDZE:
-    - Get random POKEMON
-    - Get specific POKEMON
-
-    SIMPLE WAY TO OPEN IMAGES "os/exec": 
-        cmd = exec.CommanZd("xdg-open", imagePath)
-        err := cmd.Run()
-
-    After that, however, we probably want to implement through an external library
-    Our main choice right now: Ebitengine
-    We can also try to learn Fyne instead
-
-
-
-Think about how we want to deal with storing the POKEMON
-    - DB storage
-    - Local only for temp testing or single use cases
-    - Do we want to use async delivery for multiplayer?
-
-
-
 CURRENT:
-0. Add cache to reduce stress on PokeAPI - see PokeDex/internal/pokecache.go for implementation - DONE
-1. Pokemon Teams DB
-    - Add to db by player
-        Needs AUTH
-    - Get from db by player 
-        Needs AUTH
 2. Client Side - RANDOM CATCHING CHANCE
     Once caught - fetch pokemon with pokeapi using our db, then store temp image locally
     Defer deleting local temp files?  Or just keep them stored locally.
 3. Create REPL for commands, pokedex to look up users pokemon
 4. Add image pop-up
 5. Do something with Queries/endpoints that allow for searching
+6. Actually implement use of refresh tokens (right now, we generate them but do not use them to return a new JWT)
 
-CURRENT - HandlerGetTeam
+CURRENT - REPL for cli integration
 
-NEXT - Random Poke Generation (Do we want to handle this server side and hand a poke, or have client hand a poke to server?)
-    - The add to team method that is at POST .../teams will be useful either way - its useful for deterministic adding
-    - I think the server handling the randomization in catching is probably useful in the real world, a user can't just inject a specific pokemon
+
+TODO WHEN WE HAVE FRONT END CACHING
+WE want versioning controlling front end caching:
+    007_metadata_table - table for versioning including major and minor versioning
+    major version changes when db architecture changes
+    minor version changes when we just make meaningful data changes on the back end (new pulls from pokeAPI)
+
+    On requests from the backend, versioning func that adds a header "X-Version" <major>.<minor>
+
+WE ALSO WANT:
+Gradient coloring of pokemon based on type using ASCI codes like in the pokedex entry
+
+
+CURRENT TASK - HANDLERS FOR UPDATING TEAMS BETWEEN BACK AND FRONT END

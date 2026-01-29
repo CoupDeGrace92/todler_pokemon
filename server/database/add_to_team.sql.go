@@ -10,22 +10,27 @@ import (
 )
 
 const addPokemonToTeam = `-- name: AddPokemonToTeam :exec
-INSERT INTO teams(id, created_at, updated_at, user_name, poke)
+INSERT INTO teams(created_at, updated_at, user_name, poke, count)
 VALUES(
-    gen_random_uuid(),
     NOW(),
     NOW(),
     $1,
-    $2
+    $2,
+    $3
 )
+ON CONFLICT (user_name, poke)
+DO UPDATE SET
+    updated_at = EXCLUDED.updated_at,
+    count = teams.count + $3
 `
 
 type AddPokemonToTeamParams struct {
 	UserName string
 	Poke     string
+	Count    int32
 }
 
 func (q *Queries) AddPokemonToTeam(ctx context.Context, arg AddPokemonToTeamParams) error {
-	_, err := q.db.ExecContext(ctx, addPokemonToTeam, arg.UserName, arg.Poke)
+	_, err := q.db.ExecContext(ctx, addPokemonToTeam, arg.UserName, arg.Poke, arg.Count)
 	return err
 }

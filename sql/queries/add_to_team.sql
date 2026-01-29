@@ -1,9 +1,13 @@
 -- name: AddPokemonToTeam :exec
-INSERT INTO teams(id, created_at, updated_at, user_name, poke)
+INSERT INTO teams(created_at, updated_at, user_name, poke, count)
 VALUES(
-    gen_random_uuid(),
     NOW(),
     NOW(),
     $1,
-    $2
-);
+    $2,
+    $3
+)
+ON CONFLICT (user_name, poke)
+DO UPDATE SET
+    updated_at = EXCLUDED.updated_at,
+    count = teams.count + $3;

@@ -418,29 +418,26 @@ func (cfg *apiConfig) HandlerAddToTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type PokeResp struct {
-		Pokemon []string `json:"pokemon"`
-	}
-
-	var poke PokeResp
+	poke := make(map[string]int)
 	err = json.NewDecoder(r.Body).Decode(&poke)
 	if err != nil {
 
 	}
-	for _, p := range poke.Pokemon {
-		poke := strings.ToLower(p)
-		count, err := cfg.db.ValidatePokemon(r.Context(), poke)
+	for poke, count := range poke {
+		poke := strings.ToLower(poke)
+		dbcount, err := cfg.db.ValidatePokemon(r.Context(), poke)
 		if err != nil {
 			log.Printf("Error finding %s in database: %v\n", poke, err)
 			continue
-		} else if count == 0 {
+		} else if dbcount == 0 {
 			log.Printf("%s is not a pokemon in the database\n", poke)
 			continue
 		}
 
 		params := database.AddPokemonToTeamParams{
 			UserName: username,
-			Poke:     p,
+			Poke:     poke,
+			Count:    int32(count),
 		}
 
 		err = cfg.db.AddPokemonToTeam(r.Context(), params)

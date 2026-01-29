@@ -30,11 +30,11 @@ type RefreshToken struct {
 }
 
 type Team struct {
-	ID        uuid.UUID
+	UserName  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	UserName  string
 	Poke      string
+	Count     int32
 }
 
 type User struct {
