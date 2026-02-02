@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -395,4 +396,72 @@ func UpdateTeam(pokedex map[string]int) error {
 		log.Println("Response status not OK: ", resp.Status)
 	}
 	return nil
+}
+
+func TripToInts(s string) ([]int, error) {
+	s = strings.TrimPrefix(s, "(")
+	s = strings.TrimSuffix(s, ")")
+	strSlice := strings.Split(s, ",")
+	var outSlice []int
+	for _, i := range strSlice {
+		num, err := strconv.Atoi(i)
+		if err != nil {
+			return nil, err
+		}
+		outSlice = append(outSlice, num)
+	}
+	return outSlice, nil
+}
+
+func AddZeros(i int) string {
+	s := strconv.Itoa(i)
+	if len(s) > 3 {
+		return ""
+	}
+	if len(s) < 3 {
+		for i := 0; i < 3-len(s); i++ {
+			s = "0" + s
+		}
+	}
+	return s
+}
+
+func ColorGradient(startColors []int, endColors []int, interval int) ([]int, []int, []int) {
+	var reds []int
+	var greens []int
+	var blues []int
+	if interval <= 0 {
+		return reds, greens, blues
+	}
+	if min(startColors[0], startColors[1], startColors[2], endColors[0], endColors[1], endColors[2]) < 0 {
+		return reds, greens, blues
+	} else if max(startColors[0], startColors[1], startColors[2], endColors[0], endColors[1], endColors[2]) > 255 {
+		return reds, greens, blues
+	}
+	redDif := (endColors[0] - startColors[0]) / (interval - 1)
+	greenDif := (endColors[1] - startColors[1]) / (interval - 1)
+	blueDif := (endColors[2] - startColors[2]) / (interval - 1)
+	for i := 0; i < interval; i++ {
+		r := startColors[0] + i*redDif
+		b := startColors[2] + i*blueDif
+		g := startColors[1] + i*greenDif
+		reds = append(reds, r)
+		blues = append(blues, b)
+		greens = append(greens, g)
+	}
+	return reds, greens, blues
+}
+
+func StringGradient(s string, rgbStart, rgbEnd []int) string {
+	interval := len(s)
+	reds, greens, blues := ColorGradient(rgbStart, rgbEnd, interval)
+	var outString strings.Builder
+	for i, char := range s {
+		red := AddZeros(reds[i])
+		green := AddZeros(greens[i])
+		blue := AddZeros(blues[i])
+		c := fmt.Sprintf("\033[38;2;%s;%s;%sm%c\033[0m", red, green, blue, char)
+		outString.WriteString(c)
+	}
+	return outString.String()
 }
