@@ -4,14 +4,29 @@ import (
 	gl "coupdegrace92/pokemon_for_todlers/gamelogic"
 	"fmt"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"log"
 	"strconv"
-
-	"github.com/joho/godotenv"
 )
 
+type Game struct{}
+
+func (g *Game) Update() errpr {
+	return nil
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+	return outsideWidth, outsideHeight
+}
+
 func main() {
-	_ = godotenv.Load("client/.env")
+	g := &Game{}
+	cfg := gl.InitializeClientEnv()
 	fmt.Println("Welcome to P4T!")
 	fmt.Println("Are you a new user or a returning user:")
 	fmt.Println("Type: returning for returning user, type: new for new user")
@@ -52,7 +67,7 @@ func main() {
 	for i := 0; i < 4; i++ {
 		fmt.Printf("\033[1A\033[K") //ASCII escape codes to go up a line and delete it
 	}
-	err, s := gl.Login(user[0], pass[0])
+	err, s := cfg.Login(user[0], pass[0])
 	if err != nil {
 		fmt.Println("Error logging in: ", err)
 	}
@@ -64,13 +79,14 @@ func main() {
 	gl.ClientWelcome()
 
 	//Here we are going to get the states for the user:
-	pokedex := make(map[string]int)
-	userPokes, err := gl.GetTeam()
+	pokedex := make(map[string]*gl.PokemonPlusCount)
+	userPokes, err := cfg.GetTeam()
 	if err != nil {
 		log.Println("Error getting users pokemon: ", err)
 	}
 	for _, poke := range userPokes {
-		gl.AddToMap(poke.Name, pokedex)
+		p := gl.RecievedPokemonToPokemon(poke)
+		gl.AddToMap(p, pokedex)
 	}
 
 	newPoke := make(map[string]int)
@@ -81,7 +97,7 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 		switch cmd[0] {
 		case "quit":
 			fmt.Println("Saving pokedex...")
-			err = gl.UpdateTeam(newPoke)
+			err = cfg.UpdateTeam(newPoke)
 			if err != nil {
 				fmt.Println("Error saving pokedex: ", err)
 			}
@@ -91,26 +107,29 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 			pokeID := 0
 			if cmd[1] == "-r" {
 				pokeID = gl.CatchRandom()
-				fmt.Println("CATCHING POKEMON ", pokeID)
 				strID := strconv.Itoa(pokeID)
-				poke, err := gl.GetPokemon(strID)
+				poke, err := cfg.GetPokemon(strID)
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
-				fmt.Println("CAUGHT: ", poke.Name)
-				gl.AddToMap(poke.Name, pokedex)
-				gl.AddToMap(poke.Name, newPoke)
+				s, e := gl.PokeToTypeColor(poke)
+				text := gl.StringGradient(poke.Name, s, e)
+				fmt.Println("CAUGHT: ", text)
+				gl.AddToMap(poke, pokedex)
+				gl.AddToStringMap(poke, newPoke)
 				continue
 			}
-			poke, err := gl.GetPokemon(cmd[1])
+			poke, err := cfg.GetPokemon(cmd[1])
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
-			fmt.Println("CAUGHT: ", poke.Name)
-			gl.AddToMap(poke.Name, pokedex)
-			gl.AddToMap(poke.Name, newPoke)
+			s, e := gl.PokeToTypeColor(poke)
+			text := gl.StringGradient(poke.Name, s, e)
+			fmt.Println("CAUGHT: ", text)
+			gl.AddToMap(poke, pokedex)
+			gl.AddToStringMap(poke, newPoke)
 		case "reset":
 			fmt.Println("About to reset user team, are you sure? [y/n]")
 			confirm := gl.GetInput()
@@ -118,8 +137,8 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 				continue
 			}
 			fmt.Println("Okay - deleting users pokedex - goodluck on your new journey!")
-			gl.Reset(user[0])
-			pokedex = make(map[string]int)
+			cfg.Reset(user[0])
+			pokedex = make(map[string]*gl.PokemonPlusCount)
 			newPoke = make(map[string]int)
 		case "pokedex":
 			gl.DisplayPokedex(pokedex)

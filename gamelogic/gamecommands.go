@@ -17,6 +17,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func InitializeClientEnv() Config {
+	_ = godotenv.Load("client/.env")
+	cfg := Config{
+		Refresh:   os.Getenv("REFRESH_TOKEN"),
+		ServerUrl: os.Getenv("SERVER_URL"),
+	}
+	return cfg
+}
 func GetInput() []string {
 	fmt.Print("> ")
 	scanner := bufio.NewScanner(os.Stdin)
@@ -53,7 +61,6 @@ func CatchRandom() (id int) {
 	// rand.Intn(last num)
 	defer fmt.Println("> ")
 	rawurl := os.Getenv("SERVER_URL")
-	fmt.Println(rawurl)
 	url := rawurl + "/api/pokemon/weights"
 	client := &http.Client{
 		Timeout: 10 * time.Second,
@@ -151,8 +158,8 @@ func Register(user, pass string) (outerror error, success bool) {
 	return nil, true
 }
 
-func Login(user, pass string) (outerror error, success bool) {
-	rawurl := os.Getenv("SERVER_URL")
+func (cfg *Config) Login(user, pass string) (outerror error, success bool) {
+	rawurl := cfg.ServerUrl
 	url := rawurl + "/api/login"
 	client := &http.Client{
 		Timeout: time.Second * 20,
@@ -199,11 +206,7 @@ func Login(user, pass string) (outerror error, success bool) {
 		fmt.Println("Error decoding token jsons: ", err)
 		return err, false
 	}
-	err = UpdateEnvFile("./client/.env", "JWT", t.JWT)
-	if err != nil {
-		fmt.Println("Error moving JWT to env file: ", err)
-		return err, false
-	}
+	cfg.JWT = t.JWT
 	err = UpdateEnvFile("./client/.env", "REFRESH_TOKEN", t.Refresh)
 	if err != nil {
 		fmt.Println("Error moving refresh to env file: ", err)
@@ -213,8 +216,8 @@ func Login(user, pass string) (outerror error, success bool) {
 	return nil, true
 }
 
-func GetPokemon(id string) (Pokemon, error) {
-	rawurl := os.Getenv("SERVER_URL")
+func (cfg *Config) GetPokemon(id string) (Pokemon, error) {
+	rawurl := cfg.ServerUrl
 	url := rawurl + "/api/pokemon"
 	client := &http.Client{
 		Timeout: time.Second * 20,
@@ -229,7 +232,7 @@ func GetPokemon(id string) (Pokemon, error) {
 		err = fmt.Errorf(x)
 		return Pokemon{}, err
 	}
-	token := os.Getenv("JWT")
+	token := cfg.JWT
 	req.Header.Set("Content-Type", "text/plain")
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -261,29 +264,40 @@ func GetPokemon(id string) (Pokemon, error) {
 	//currently there is only a single string that goes in here - we will modify when we include back sprite
 	spriteList["front"] = poke.Sprites
 
-	cleanedPoke := Pokemon{
-		Id:      int(poke.Id),
-		Name:    poke.Name,
-		Types:   typeList,
-		Sprites: spriteList,
-		Url:     poke.Url,
-		Xp:      int(poke.Xp),
-	}
+	cleanedPoke := RecievedPokemonToPokemon(poke)
 
 	return cleanedPoke, nil
 }
 
-func AddToMap(name string, pokeMap map[string]int) {
-	count, ok := pokeMap[name]
+func AddToMap(poke Pokemon, pokeMap map[string]*PokemonPlusCount) {
+	p, ok := pokeMap[poke.Name]
 	if !ok {
-		pokeMap[name] = 1
+
+		pokeMap[poke.Name] = &PokemonPlusCount{
+			Id:      int(poke.Id),
+			Name:    poke.Name,
+			Types:   poke.Types, //If this causes problems, use strings.Trimspace
+			Sprites: poke.Sprites,
+			Url:     poke.Url,
+			Xp:      int(poke.Xp),
+			Count:   1,
+		}
 		return
 	}
-	pokeMap[name] = count + 1
+	p.Count++
 }
 
-func Reset(user string) {
-	rawurl := os.Getenv("SERVER_URL")
+func AddToStringMap(poke Pokemon, pokeMap map[string]int) {
+	p, ok := pokeMap[poke.Name]
+	if !ok {
+		pokeMap[poke.Name] = 1
+		return
+	}
+	pokeMap[poke.Name] = p + 1
+}
+
+func (cfg *Config) Reset(user string) {
+	rawurl := cfg.ServerUrl
 	url := rawurl + "/api/teams/" + user
 	client := http.Client{
 		Timeout: time.Second * 20,
@@ -295,7 +309,7 @@ func Reset(user string) {
 		return
 	}
 
-	token := os.Getenv("JWT")
+	token := cfg.JWT
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := client.Do(req)
@@ -310,7 +324,7 @@ func Reset(user string) {
 	}
 }
 
-func DisplayPokedex(pokedex map[string]int) {
+func DisplayPokedex(pokedex map[string]*PokemonPlusCount) {
 	//Thinking this through - I want to create a list of all pokemon in the pokedex, then sort it alphabetically
 	var pokeList []string
 	for i := range pokedex {
@@ -327,12 +341,19 @@ func DisplayPokedex(pokedex map[string]int) {
 		for i := 0; i < 30-num; i++ {
 			spaces += " "
 		}
-		fmt.Printf("%s%s\033[31m|\033[0m%v\n", poke, spaces, pokedex[poke])
+		p := pokedex[poke]
+		rawP := Pokemon{
+			Name:  p.Name,
+			Types: p.Types,
+		}
+		s, e := PokeToTypeColor(rawP)
+		text := StringGradient(p.Name, s, e)
+		fmt.Printf("%s%s\033[31m|\033[0m%v\n", text, spaces, p.Count)
 	}
 }
 
-func GetTeam() ([]RecievedPokemon, error) {
-	rawurl := os.Getenv("SERVER_URL")
+func (cfg *Config) GetTeam() ([]RecievedPokemon, error) {
+	rawurl := cfg.ServerUrl
 	url := rawurl + "/api/teams"
 	client := http.Client{
 		Timeout: time.Second * 20,
@@ -343,7 +364,7 @@ func GetTeam() ([]RecievedPokemon, error) {
 		log.Println("Error creating request ", err)
 		return nil, err
 	}
-	token := os.Getenv("JWT")
+	token := cfg.JWT
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := client.Do(req)
@@ -371,8 +392,8 @@ func GetTeam() ([]RecievedPokemon, error) {
 	return out, nil
 }
 
-func UpdateTeam(pokedex map[string]int) error {
-	rawurl := os.Getenv("SERVER_URL")
+func (cfg *Config) UpdateTeam(pokedex map[string]int) error {
+	rawurl := cfg.ServerUrl
 	url := rawurl + "/api/teams"
 	client := http.Client{
 		Timeout: time.Second * 20,
@@ -384,7 +405,7 @@ func UpdateTeam(pokedex map[string]int) error {
 		log.Println("Error creating request ", err)
 		return err
 	}
-	token := os.Getenv("JWT")
+	token := cfg.JWT
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := client.Do(req)
@@ -464,4 +485,44 @@ func StringGradient(s string, rgbStart, rgbEnd []int) string {
 		outString.WriteString(c)
 	}
 	return outString.String()
+}
+
+func RecievedPokemonToPokemon(poke RecievedPokemon) Pokemon {
+	sprites := make(map[string]string)
+	sprites["front"] = poke.Sprites
+	types := strings.Split(poke.Types, ",")
+	var outTypes []string
+	for _, t := range types {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		t = strings.ToLower(t)
+		outTypes = append(outTypes, t)
+	}
+	out := Pokemon{
+		Id:      int(poke.Id),
+		Name:    poke.Name,
+		Types:   outTypes,
+		Sprites: sprites,
+		Url:     poke.Url,
+		Xp:      int(poke.Xp),
+	}
+	return out
+}
+
+func PokeToTypeColor(poke Pokemon) (startRGB, endRGB []int) {
+	types := poke.Types
+	if len(types) < 1 {
+		log.Println("Error: No types found")
+		return nil, nil
+	} else if len(types) > 2 {
+		log.Println("Error: too many types found: ", types)
+	}
+	startRGB = TypeColors[types[0]]
+	endRGB = startRGB
+	if len(types) > 1 {
+		endRGB = TypeColors[types[1]]
+	}
+	return startRGB, endRGB
 }
