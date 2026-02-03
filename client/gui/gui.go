@@ -15,7 +15,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"golang.org/x/image/font"
 )
 
 type Vector struct {
@@ -71,22 +70,22 @@ type PokeLocation struct {
 	Sprite    []*ebiten.Image
 }
 
-func LoadFontFace(path string, size float64) (*text.GoTextFace, error) {
+func LoadFontFace(path string, size float64) (text.Face, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-
-	r := bytes.NewReader(data)
-	src, err := text.NewGoTextFaceSource(r)
+	src, err := text.NewGoTextFaceSource(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
-	face := text.GoTextFace{
+	//Method Measure has a pointer reciever so we need the tface to to be a pointer to a text-face like object
+
+	tface := &text.GoTextFace{
 		Source: src,
 		Size:   size,
 	}
-	return &face, nil
+	return tface, nil
 }
 
 type Timer struct {
@@ -116,8 +115,8 @@ type Game struct {
 	Cfg         *gl.Config
 	CommandLine []rune
 	Commands    []string
-	TitleFont   font.Face
-	CommandFont font.Face
+	TitleFont   text.Face
+	CommandFont text.Face
 	User        string
 }
 
@@ -159,17 +158,15 @@ func init() {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	if g.TitleFont != nil {
+
 		w := screen.Bounds().Dx()
 		h := screen.Bounds().Dy()
 		t := fmt.Sprintf("%s's Pokemon Adventure", g.User)
-		bounds, adv := font.BoundString(g.TitleFont, t)
 
-		yMin := bounds.Min.Y.Round()
-		yMax := bounds.Max.Y.Round()
-		width := adv.Round()
+		width, _ := text.Measure(t, g.TitleFont, 0)
 
 		x := int(w/2) - int(width/2)
-		y := h - (yMax - yMin) - int(h/15)
+		y := int(h / 15)
 
 		var options text.DrawOptions
 		options.GeoM.Translate(float64(x), float64(y))
@@ -177,6 +174,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		text.Draw(screen, t, g.TitleFont, &options)
 	}
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
