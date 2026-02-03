@@ -1,6 +1,7 @@
 package main
 
 import (
+	"coupdegrace92/pokemon_for_todlers/client/gui"
 	gl "coupdegrace92/pokemon_for_todlers/gamelogic"
 	"fmt"
 
@@ -10,23 +11,9 @@ import (
 	"strconv"
 )
 
-type Game struct{}
-
-func (g *Game) Update() errpr {
-	return nil
-}
-
-func (g *Game) Draw(screen *ebiten.Image) {
-
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return outsideWidth, outsideHeight
-}
-
 func main() {
-	g := &Game{}
 	cfg := gl.InitializeClientEnv()
+	core := &gui.Core{}
 	fmt.Println("Welcome to P4T!")
 	fmt.Println("Are you a new user or a returning user:")
 	fmt.Println("Type: returning for returning user, type: new for new user")
@@ -90,6 +77,8 @@ func main() {
 	}
 
 	newPoke := make(map[string]int)
+	core.PokeDex = pokedex
+	core.NewPokemon = newPoke
 
 repl: //This is so we can break the outerloop insteaad of the switch statement
 	for {
@@ -97,18 +86,15 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 		switch cmd[0] {
 		case "quit":
 			fmt.Println("Saving pokedex...")
-			err = cfg.UpdateTeam(newPoke)
+			err = cfg.UpdateTeam(core.NewPokemon)
 			if err != nil {
 				fmt.Println("Error saving pokedex: ", err)
 			}
 			fmt.Println("Exiting P4T...")
 			break repl
 		case "catch":
-			pokeID := 0
 			if cmd[1] == "-r" {
-				pokeID = gl.CatchRandom()
-				strID := strconv.Itoa(pokeID)
-				poke, err := cfg.GetPokemon(strID)
+				poke, err := core.CatchRandom(cfg)
 				if err != nil {
 					fmt.Println(err)
 					continue
@@ -116,20 +102,17 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 				s, e := gl.PokeToTypeColor(poke)
 				text := gl.StringGradient(poke.Name, s, e)
 				fmt.Println("CAUGHT: ", text)
-				gl.AddToMap(poke, pokedex)
-				gl.AddToStringMap(poke, newPoke)
 				continue
 			}
-			poke, err := cfg.GetPokemon(cmd[1])
+			poke, err := core.Catch(cfg, cmd[1])
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error catching %s: %v\n", cmd[1], err)
 				continue
 			}
 			s, e := gl.PokeToTypeColor(poke)
 			text := gl.StringGradient(poke.Name, s, e)
 			fmt.Println("CAUGHT: ", text)
-			gl.AddToMap(poke, pokedex)
-			gl.AddToStringMap(poke, newPoke)
+
 		case "reset":
 			fmt.Println("About to reset user team, are you sure? [y/n]")
 			confirm := gl.GetInput()
@@ -138,14 +121,53 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 			}
 			fmt.Println("Okay - deleting users pokedex - goodluck on your new journey!")
 			cfg.Reset(user[0])
-			pokedex = make(map[string]*gl.PokemonPlusCount)
-			newPoke = make(map[string]int)
+			core.PokeDex = make(map[string]*gl.PokemonPlusCount)
+			core.NewPokemon = make(map[string]int)
 		case "pokedex":
-			gl.DisplayPokedex(pokedex)
+			gl.DisplayPokedex(core.PokeDex)
+		case "gui":
+			fmt.Println("Starting p4r graphical user interface")
+			if len(cmd) < 3 {
+				fmt.Println("Too few arguments for gui, need a width and height")
+				continue
+			}
+			w, err := strconv.Atoi(cmd[1])
+			if err != nil {
+				fmt.Println("Could not convert dimensions to int")
+				continue
+			}
+			h, err := strconv.Atoi(cmd[2])
+			if err != nil {
+				fmt.Println("Could not convert dimensions to int")
+				continue
+			}
+			ebiten.SetWindowSize(w, h)
+			title := fmt.Sprintf("P4T - %s", user[0])
+			ebiten.SetWindowTitle(title)
+			TitleFont, err := gui.LoadFontFace("assets/fonts/PokeHollow.ttf", 72)
+			if err != nil {
+				fmt.Println("Could not load title font")
+				continue
+			}
+			CommandFont, err := gui.LoadFontFace("assets/fonts/warownia-narrow.otf", 36)
+			if err != nil {
+				fmt.Println("Could not load command font")
+				continue
+			}
+			g := &gui.Game{
+				C:           core,
+				Cfg:         &cfg,
+				TitleFont:   TitleFont,
+				CommandFont: CommandFont,
+				User:        user[0],
+			}
+			err = ebiten.RunGame(g)
+			if err != nil {
+				fmt.Println("Error starting up gui: ", err)
+			}
 		default:
 			fmt.Println("Error: Unrecognized Command")
 		}
 	}
-	//Update DB before exitting program
 
 }

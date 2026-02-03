@@ -4,6 +4,7 @@ type Config struct {
 	JWT       string
 	Refresh   string
 	ServerUrl string
+	Assets    string
 }
 
 type RecievedPokemon struct {

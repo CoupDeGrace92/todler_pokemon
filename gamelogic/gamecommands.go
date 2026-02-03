@@ -22,6 +22,7 @@ func InitializeClientEnv() Config {
 	cfg := Config{
 		Refresh:   os.Getenv("REFRESH_TOKEN"),
 		ServerUrl: os.Getenv("SERVER_URL"),
+		Assets:    os.Getenv("ASSET_PATH"),
 	}
 	return cfg
 }
@@ -50,6 +51,7 @@ func ClientWelcome() {
 	fmt.Println("pokedex            |None                    |Will display pokemon caught and count")
 	fmt.Println("quit               |None                    |Will exit p4t                     ")
 	fmt.Println("reset              |None                    |Resets caught pokemon to none     ")
+	fmt.Println("gui                |<Width> <Height>        |Starts the gui for p4t")
 
 	fmt.Println()
 	fmt.Println()
