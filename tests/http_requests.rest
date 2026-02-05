@@ -44,7 +44,8 @@ Content-Type: application/json
 Authorization: Bearer {{JWTtoken}}
 
 {
-    "pokemon": ["pikachu", "rapidash"]
+    "rapidash": 1,
+    "pikachu": 2
 }
 
 ####

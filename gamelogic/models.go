@@ -14,6 +14,7 @@ type RecievedPokemon struct {
 	Sprites string `json:"sprite_url"`
 	Url     string `json:"url"`
 	Xp      int32  `json:"base_xp"`
+	Count   int32  `json:"count"`
 }
 
 type Pokemon struct {
@@ -23,6 +24,7 @@ type Pokemon struct {
 	Sprites map[string]string
 	Url     string
 	Xp      int
+	Count   int
 }
 
 type PokemonPlusCount struct {

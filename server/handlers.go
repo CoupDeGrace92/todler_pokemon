@@ -486,6 +486,7 @@ func (cfg *apiConfig) HandlerGetTeam(w http.ResponseWriter, r *http.Request) {
 		Sprite string `json:"sprite_url"`
 		Types  string `json:"types"`
 		Url    string `json:"url"`
+		Count  int32  `json:"count"`
 	}
 
 	type Team struct {
@@ -512,6 +513,7 @@ func (cfg *apiConfig) HandlerGetTeam(w http.ResponseWriter, r *http.Request) {
 			Sprite: pObject.Sprite,
 			Types:  pObject.Type,
 			Url:    pObject.Url,
+			Count:  p.Count,
 		}
 		outTeam.Pokemon = append(outTeam.Pokemon, cleanedPoke)
 	}

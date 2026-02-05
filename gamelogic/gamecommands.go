@@ -282,7 +282,7 @@ func AddToMap(poke Pokemon, pokeMap map[string]*PokemonPlusCount) {
 			Sprites: poke.Sprites,
 			Url:     poke.Url,
 			Xp:      int(poke.Xp),
-			Count:   1,
+			Count:   poke.Count,
 		}
 		return
 	}
@@ -509,6 +509,7 @@ func RecievedPokemonToPokemon(poke RecievedPokemon) Pokemon {
 		Sprites: sprites,
 		Url:     poke.Url,
 		Xp:      int(poke.Xp),
+		Count:   int(poke.Count),
 	}
 	return out
 }

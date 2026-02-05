@@ -154,12 +154,21 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 				fmt.Println("Could not load command font")
 				continue
 			}
+			commandRegistry := make(map[string]func(*gui.Game, ...string) error)
+			commandRegistry["quit"] = gui.Quit
+			commandRegistry["catch"] = gui.Catch
+
 			g := &gui.Game{
 				C:           core,
 				Cfg:         &cfg,
 				TitleFont:   TitleFont,
 				CommandFont: CommandFont,
 				User:        user[0],
+				Commands:    commandRegistry,
+				NextOpenSpot: gui.Vector{
+					X: 0,
+					Y: 100,
+				},
 			}
 			err = ebiten.RunGame(g)
 			if err != nil {
