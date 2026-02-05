@@ -78,6 +78,7 @@ type PokeLocation struct {
 	Position Vector
 	Sprite   *ebiten.Image
 	Target   Vector
+	Name     string
 }
 
 func LoadFontFace(path string, size float64) (text.Face, error) {
@@ -129,6 +130,7 @@ type Game struct {
 	Commands     map[string]func(g *Game, args ...string) error
 	TitleFont    text.Face
 	CommandFont  text.Face
+	PokeFont     text.Face
 	User         string
 	Screen       *ebiten.Image
 	NextOpenSpot Vector
@@ -153,6 +155,13 @@ func (g *Game) Update() error {
 		if r == ' ' || r == '_' || r == '-' {
 			g.CommandLine = append(g.CommandLine, r)
 		}
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		g.ScrollLeft(10.0)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+		g.ScrollRight(10.0)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
@@ -244,6 +253,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	sh := float64(screen.Bounds().Dy())
+	sw := float64(screen.Bounds().Dx())
 
 	for i, loc := range g.Pokemon {
 		if loc.Sprite == nil {
@@ -259,9 +269,28 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		spriteScale := (sh * targetSpriteScreenFraction) / ph
 
+		//Bounding box to prevent drawing stuff completely off screen
+		x := loc.Position.X
+		y := loc.Position.Y
+		boundingX := (x + float64(loc.Sprite.Bounds().Dx())*spriteScale)
+		boundingY := (y + float64(loc.Sprite.Bounds().Dy())*spriteScale)
+		if x >= sw || y >= sh || boundingX <= 0 || boundingY <= 0 {
+			continue
+		}
+
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Scale(spriteScale, spriteScale)
 		op.GeoM.Translate(loc.Position.X, loc.Position.Y)
+		var toptions text.DrawOptions
+
+		width, _ := text.Measure(loc.Name, g.PokeFont, 0)
+		xPos := loc.Position.X + float64(loc.Sprite.Bounds().Dx())*spriteScale/2 - width/2
+		yPos := loc.Position.Y + float64(loc.Sprite.Bounds().Dy())*spriteScale
+
+		toptions.GeoM.Translate(xPos, yPos)
+		toptions.ColorScale.ScaleWithColor(color.White)
+
+		text.Draw(screen, loc.Name, g.PokeFont, &toptions)
 
 		screen.DrawImage(loc.Sprite, op)
 	}
@@ -343,6 +372,7 @@ func (g *Game) drawCaughtPokemon(poke gl.Pokemon) error {
 		Sprite:   p,
 		Position: Vector{X: x, Y: y},
 		Target:   g.NextOpenSpot,
+		Name:     poke.Name,
 	}
 
 	g.NextOpenSpot.X = g.NextOpenSpot.X + wScaled + .005*sw

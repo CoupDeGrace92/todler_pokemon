@@ -154,6 +154,11 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 				fmt.Println("Could not load command font")
 				continue
 			}
+			pokefont, err := gui.LoadFontFace("assets/fonts/warownia-narrow.otf", 22)
+			if err != nil {
+				fmt.Println("Could not lode pokemon font")
+				continue
+			}
 			commandRegistry := make(map[string]func(*gui.Game, ...string) error)
 			commandRegistry["quit"] = gui.Quit
 			commandRegistry["catch"] = gui.Catch
@@ -163,11 +168,12 @@ repl: //This is so we can break the outerloop insteaad of the switch statement
 				Cfg:         &cfg,
 				TitleFont:   TitleFont,
 				CommandFont: CommandFont,
+				PokeFont:    pokefont,
 				User:        user[0],
 				Commands:    commandRegistry,
 				NextOpenSpot: gui.Vector{
 					X: 0,
-					Y: 100,
+					Y: 200,
 				},
 			}
 			err = ebiten.RunGame(g)
